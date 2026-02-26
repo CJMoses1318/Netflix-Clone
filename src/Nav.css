@@ -13,7 +13,7 @@
 
 .nav__contents {
     display: flex;
-    justify-content: center;
+    justify-content: space-between;
 
 }
 
@@ -23,7 +23,7 @@
 
 .nav__logo {
     position: fixed;
-    top: 10;
+    top: 10px;
     left: 0;
     width: 80px;
     object-fit: contain;

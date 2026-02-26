@@ -9,6 +9,7 @@ function HomeScreen() {
   return (
     <div className="homeScreen">
       <Nav />
+
       <Banner />
 
       <Row
