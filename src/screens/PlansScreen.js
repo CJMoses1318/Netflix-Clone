@@ -7,29 +7,53 @@ import { selectUser } from "../features/userSlice";
 import { loadStripe } from "@stripe/stripe-js";
 
 
+
+
 function PlansScreen() {
   const [products, setProducts] = useState([]);
   const user = useSelector(selectUser);
 
-  useEffect(() => {
-    db.collection("products")
+ useEffect(() => {
+
+  const fetchProducts = async () => {
+
+    const querySnapshot = await db
+
+      .collection("products")
+
       .where("active", "==", true)
-      .get()
-      .then((querySnapshot) => {
-        const products = {};
-        querySnapshot.forEach(async (productDoc) => {
-          products[productDoc.id] = productDoc.data();
-          const priceSnap = await productDoc.ref.collection("prices").get();
-          priceSnap.docs.forEach((price) => {
-            products[productDoc.id].prices = {
-              priceId: price.id,
-              priceData: price.data(),
-            };
-          });
-        });
-        setProducts(products);
+
+      .get();
+
+    const products = {};
+
+    for (const productDoc of querySnapshot.docs) {
+
+      products[productDoc.id] = productDoc.data();
+
+      const priceSnap = await productDoc.ref.collection("prices").get();
+
+      priceSnap.docs.forEach((price) => {
+
+        products[productDoc.id].prices = {
+
+          priceId: price.id,
+
+          priceData: price.data(),
+
+        };
+
       });
-  }, []);
+
+    }
+
+    setProducts(products);
+
+  };
+
+  fetchProducts();
+
+}, []);
 
   console.log(products);
 
@@ -78,5 +102,7 @@ function PlansScreen() {
     </div>
   );
 }
+
+
 
 export default PlansScreen;
