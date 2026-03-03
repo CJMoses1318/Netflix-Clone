@@ -6,56 +6,68 @@ import { useSelector } from "react-redux";
 import { selectUser } from "../features/userSlice";
 import { loadStripe } from "@stripe/stripe-js";
 
-
-
-
 function PlansScreen() {
   const [products, setProducts] = useState([]);
   const user = useSelector(selectUser);
+  const [subscription, setSubscription] = useState(null);
 
- useEffect(() => {
+  useEffect(() => {
+    db.collection("customers")
 
-  const fetchProducts = async () => {
+      .doc(user.uid)
 
-    const querySnapshot = await db
+      .collection("subscriptions")
 
-      .collection("products")
+      .get()
+      .then((querySnapshot) => {
+        querySnapshot.forEach(async (subscription) => {
+          setSubscription({
+            role: subscription.data().role,
 
-      .where("active", "==", true)
+            current_period_end: subscription.data().current_period_end.seconds,
 
-      .get();
-
-    const products = {};
-
-    for (const productDoc of querySnapshot.docs) {
-
-      products[productDoc.id] = productDoc.data();
-
-      const priceSnap = await productDoc.ref.collection("prices").get();
-
-      priceSnap.docs.forEach((price) => {
-
-        products[productDoc.id].prices = {
-
-          priceId: price.id,
-
-          priceData: price.data(),
-
-        };
-
+            current_period_start:
+              subscription.data().current_period_start.seconds,
+          });
+        });
       });
+  }, [user.uid]);
 
-    }
+  useEffect(() => {
+    const fetchProducts = async () => {
+      const querySnapshot = await db
 
-    setProducts(products);
+        .collection("products")
 
-  };
+        .where("active", "==", true)
 
-  fetchProducts();
+        .get();
 
-}, []);
+      const products = {};
+
+      for (const productDoc of querySnapshot.docs) {
+        products[productDoc.id] = productDoc.data();
+
+        const priceSnap = await productDoc.ref.collection("prices").get();
+
+        priceSnap.docs.forEach((price) => {
+          products[productDoc.id].prices = {
+            priceId: price.data().price,
+
+            priceData: price.data(),
+          };
+          console.log(price.data());
+        });
+      }
+
+      setProducts(products);
+    };
+
+    fetchProducts();
+  }, []);
 
   console.log(products);
+  console.log(subscription);
 
   const loadCheckout = async (priceId) => {
     const docRef = await db
@@ -68,33 +80,56 @@ function PlansScreen() {
         cancel_url: window.location.origin,
       });
 
-      docRef.onSnapshot(async(snap) => {
-        const { error, sessionId } = snap.data();
+    docRef.onSnapshot(async (snap) => {
+      const { error, sessionId } = snap.data();
 
-        if (error) {
-            alert(`An error occured: ${error.message}`);
-        }
+      if (error) {
+        alert(`An error occured: ${error.message}`);
+      }
 
-        if (sessionId) {
-            const stripe = await loadStripe(
-                "pk_test_51T5KA4EqFIKTZGe8NbC2XVSo2CLVpQpO4NGQ8EHfOnvhB7ov8CXfzlYorpxVOOHYs20uKTn80bZq4M1eSRR8hEq2006xmbXHF7"
-            );
-            stripe.redirectToCheckout({ sessionId });
-        }
-      })
+      if (sessionId) {
+        const stripe = await loadStripe(
+          "pk_test_51T5KA4EqFIKTZGe8NbC2XVSo2CLVpQpO4NGQ8EHfOnvhB7ov8CXfzlYorpxVOOHYs20uKTn80bZq4M1eSRR8hEq2006xmbXHF7",
+        );
+        stripe.redirectToCheckout({ sessionId });
+      }
+    });
   };
 
   return (
     <div className="plansScreen">
+      <br />
+      {subscription && (
+        <p>
+          Renewal Date:{" "}
+          {new Date(
+            subscription?.current_period_end * 1000,
+          ).toLocaleDateString()}{" "}
+        </p>
+      )}
+
       {Object.entries(products).map(([productId, productData]) => {
+        const isCurrentPackage = productData.name
+          ?.toLowerCase()
+          .includes(subscription?.role);
+
         return (
-          <div key={productId} className="plansScreen__plan">
+          <div
+            key={productId}
+            className={`${
+              isCurrentPackage && "plansScreen__plan--disabled"
+            } plansScreen__plan}`}
+          >
             <div className="plansScreen__info">
               <h5>{productData.name}</h5>
               <h6>{productData.description}</h6>
             </div>
-            <button onClick={() => loadCheckout(productData?.prices?.priceId)}>
-              Subscribe
+            <button
+              onClick={() =>
+                !isCurrentPackage && loadCheckout(productData?.prices?.priceId)
+              }
+            >
+              {isCurrentPackage ? "Current Package" : "Subscribe"}
             </button>
           </div>
         );
@@ -103,6 +138,9 @@ function PlansScreen() {
   );
 }
 
-
-
 export default PlansScreen;
+
+
+// TODO 
+// -Get subscription/role into firebase/stripe
+// -Get button on profile screen to display current package
