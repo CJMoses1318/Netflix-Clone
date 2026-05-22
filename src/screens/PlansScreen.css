@@ -1,6 +1,14 @@
+.plansScreen {
+    width: 100%;
+}
+
 .plansScreen__plan {
-    display: flex;
-    justify-content: space-between;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: center;
+    column-gap: 16px;
+    width: 100%;
+    box-sizing: border-box;
     padding: 20px;
     opacity: 0.8;
 }
@@ -9,16 +17,51 @@
     opacity: 1;
 }
 
-.plansScreen__plan > button {
-    padding: 10px 20px;
-    font-size: 1rem;
-    color: #fff;
-    background-color: #e50914;
-    font-weight: 600;
-    border: none;
-    cursor: pointer;
+.plansScreen__info {
+    min-width: 0;
 }
 
-.plansScreen__plan--disabled > button {
-    background-color: gray !important;
+.plansScreen__actions {
+    justify-self: end;
+}
+
+.plansScreen__subscribe {
+    display: inline-block;
+    padding: 10px 20px;
+    font-size: 1rem;
+    color: #000;
+    background-color: #fff;
+    font-weight: 600;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    appearance: none;
+    -webkit-appearance: none;
+    transition: background-color 0.2s ease, color 0.2s ease;
+}
+
+button.plansScreen__subscribe:hover,
+button.plansScreen__subscribe:focus-visible,
+button.plansScreen__subscribe--hover {
+    background: #e50914;
+    background-color: #e50914;
+    color: #fff;
+}
+
+.plansScreen__plan--disabled .plansScreen__subscribe {
+    background-color: gray;
+    color: #fff;
+    cursor: default;
+}
+
+.plansScreen__plan--disabled button.plansScreen__subscribe:hover,
+.plansScreen__plan--disabled button.plansScreen__subscribe:focus-visible {
+    background: gray;
+    background-color: gray;
+    color: #fff;
+}
+
+.plansScreen__noPlan {
+    opacity: 0.8;
+    margin-bottom: 8px;
 }

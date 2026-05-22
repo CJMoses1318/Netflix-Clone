@@ -15,12 +15,14 @@
 
 .profileScreen__info {
     display: flex;
+    min-width: 0;
 }
 
 .profileScreen__details {
     color: white;
     margin-left: 25px;
     flex: 1;
+    min-width: 0;
 }
 
 .profileScreen__body > h1 {
@@ -53,11 +55,52 @@
 
 .profileScreen__plans {
     margin-top: 20px;
+    width: 100%;
+    min-width: 0;
 }
 
 .profileScreen__plans > h3 {
     border-bottom: 1px solid #282c2d;
     padding-bottom: 10px;
+}
+
+.profileScreen__planSummary {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    width: 100%;
+    margin-top: 12px;
+    padding: 15px 20px;
+    background-color: gray;
+    color: white;
+    border: none;
+    cursor: pointer;
+    text-align: left;
+    font-size: 15px;
+}
+
+.profileScreen__planSummary:hover {
+    background-color: #6b6b6b;
+}
+
+.profileScreen__planSummaryText {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.profileScreen__planSummaryLabel {
+    font-weight: 600;
+}
+
+.profileScreen__planSummaryDetail {
+    font-size: 13px;
+    opacity: 0.9;
+}
+
+.profileScreen__planSummaryChevron {
+    font-size: 12px;
+    margin-left: 12px;
 }
 
 .profileScreen__info >img {

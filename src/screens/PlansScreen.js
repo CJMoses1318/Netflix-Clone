@@ -1,73 +1,54 @@
 import React, { useEffect, useState } from "react";
 import "./PlansScreen.css";
 import db from "../firebase";
-import { auth } from "../firebase";
 import { useSelector } from "react-redux";
 import { selectUser } from "../features/userSlice";
 import { loadStripe } from "@stripe/stripe-js";
+import {
+  formatRenewalDate,
+  isCurrentProduct,
+  useSubscription,
+} from "../hooks/useSubscription";
 
-function PlansScreen() {
-  const [products, setProducts] = useState([]);
+function PlansScreen({ subscription: subscriptionProp }) {
+  const [products, setProducts] = useState({});
+  const [hoveredPlanId, setHoveredPlanId] = useState(null);
   const user = useSelector(selectUser);
-  const [subscription, setSubscription] = useState(null);
-
-  useEffect(() => {
-    db.collection("customers")
-
-      .doc(user.uid)
-
-      .collection("subscriptions")
-
-      .get()
-      .then((querySnapshot) => {
-        querySnapshot.forEach(async (subscription) => {
-          setSubscription({
-            role: subscription.data().role,
-
-            current_period_end: subscription.data().current_period_end.seconds,
-
-            current_period_start:
-              subscription.data().current_period_start.seconds,
-          });
-        });
-      });
-  }, [user.uid]);
+  const hasSubscriptionProp = subscriptionProp !== undefined;
+  const { subscription: subscriptionFromHook } = useSubscription(
+    hasSubscriptionProp ? null : user.uid,
+  );
+  const subscription = hasSubscriptionProp
+    ? subscriptionProp
+    : subscriptionFromHook;
 
   useEffect(() => {
     const fetchProducts = async () => {
       const querySnapshot = await db
-
         .collection("products")
-
         .where("active", "==", true)
-
         .get();
 
-      const products = {};
+      const productsMap = {};
 
       for (const productDoc of querySnapshot.docs) {
-        products[productDoc.id] = productDoc.data();
+        productsMap[productDoc.id] = productDoc.data();
 
         const priceSnap = await productDoc.ref.collection("prices").get();
 
         priceSnap.docs.forEach((price) => {
-          products[productDoc.id].prices = {
+          productsMap[productDoc.id].prices = {
             priceId: price.data().price,
-
             priceData: price.data(),
           };
-          console.log(price.data());
         });
       }
 
-      setProducts(products);
+      setProducts(productsMap);
     };
 
     fetchProducts();
   }, []);
-
-  console.log(products);
-  console.log(subscription);
 
   const loadCheckout = async (priceId) => {
     const docRef = await db
@@ -88,9 +69,12 @@ function PlansScreen() {
       }
 
       if (sessionId) {
-        const stripe = await loadStripe(
-          "pk_test_51T5KA4EqFIKTZGe8NbC2XVSo2CLVpQpO4NGQ8EHfOnvhB7ov8CXfzlYorpxVOOHYs20uKTn80bZq4M1eSRR8hEq2006xmbXHF7",
-        );
+        const publishableKey = process.env.REACT_APP_STRIPE_PUBLISHABLE_KEY;
+        if (!publishableKey) {
+          alert("Stripe publishable key is not configured.");
+          return;
+        }
+        const stripe = await loadStripe(publishableKey);
         stripe.redirectToCheckout({ sessionId });
       }
     });
@@ -99,38 +83,51 @@ function PlansScreen() {
   return (
     <div className="plansScreen">
       <br />
-      {subscription && (
+      {subscription ? (
         <p>
-          Renewal Date:{" "}
-          {new Date(
-            subscription?.current_period_end * 1000,
-          ).toLocaleDateString()}{" "}
+          Renewal Date: {formatRenewalDate(subscription.current_period_end)}
         </p>
+      ) : (
+        <p className="plansScreen__noPlan">No active plan</p>
       )}
 
       {Object.entries(products).map(([productId, productData]) => {
-        const isCurrentPackage = productData.name
-          ?.toLowerCase()
-          .includes(subscription?.role);
+        const isCurrentPackage = isCurrentProduct(
+          productData,
+          subscription?.role,
+        );
 
         return (
           <div
             key={productId}
-            className={`${
-              isCurrentPackage && "plansScreen__plan--disabled"
-            } plansScreen__plan}`}
+            className={`plansScreen__plan${
+              isCurrentPackage ? " plansScreen__plan--disabled" : ""
+            }`}
           >
             <div className="plansScreen__info">
               <h5>{productData.name}</h5>
               <h6>{productData.description}</h6>
             </div>
-            <button
-              onClick={() =>
-                !isCurrentPackage && loadCheckout(productData?.prices?.priceId)
-              }
-            >
-              {isCurrentPackage ? "Current Package" : "Subscribe"}
-            </button>
+            <div className="plansScreen__actions">
+              <button
+                type="button"
+                className={`plansScreen__subscribe${
+                  !isCurrentPackage && hoveredPlanId === productId
+                    ? " plansScreen__subscribe--hover"
+                    : ""
+                }`}
+                onMouseEnter={() =>
+                  !isCurrentPackage && setHoveredPlanId(productId)
+                }
+                onMouseLeave={() => setHoveredPlanId(null)}
+                onClick={() =>
+                  !isCurrentPackage &&
+                  loadCheckout(productData?.prices?.priceId)
+                }
+              >
+                {isCurrentPackage ? "Current Package" : "Subscribe"}
+              </button>
+            </div>
           </div>
         );
       })}
@@ -139,8 +136,3 @@ function PlansScreen() {
 }
 
 export default PlansScreen;
-
-
-// TODO 
-// -Get subscription/role into firebase/stripe
-// -Get button on profile screen to display current package
